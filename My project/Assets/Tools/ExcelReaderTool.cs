@@ -13,9 +13,12 @@ public class ExcelReaderTool : MonoBehaviour
     public static void ExcelReader()
     {
         var curDirectory = Directory.GetCurrentDirectory();
-        var parentDirectory = Directory.GetParent(curDirectory).FullName;
-        var lastParentDirectory = Directory.GetParent(parentDirectory).FullName;
 
-        Debug.LogError(lastParentDirectory);
+        var readFloder = Directory.GetDirectories(curDirectory, "Excel");
+        var excelContainer = Directory.GetFiles(readFloder[0], "*.xlsx");
+
+        var writeFloder = Directory.GetDirectories(curDirectory, "Config");
+
+        Debug.LogError(excelContainer.Length);
     }
 }
