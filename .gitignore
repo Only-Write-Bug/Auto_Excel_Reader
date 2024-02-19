@@ -73,5 +73,9 @@ crashlytics-build.properties
 
 # Windows files
 Thumbs.db
-Desktop.ini 作者：左将军领徐州牧儒东侯 https://www.bilibili.com/read/cv19319343/ 出处：bilibili
 My project/ProjectSettings/
+
+My project/Assets/Resources.meta
+
+My project/Assets/Resources/BillingMode.json
+My project/Assets/Resources/BillingMode.json.meta
