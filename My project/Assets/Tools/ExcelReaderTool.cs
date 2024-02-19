@@ -47,10 +47,10 @@ public class ExcelReaderTool : MonoBehaviour
             }
 
             FileStream csFile = new FileStream(FileNameFactory(fileStream), FileMode.Create);
-            Debug.Log($"Create new file :: {csFile.Name}");
 
             ExcelReaderTool.ReadExcelSheet_WriteCSFile(firstSheet, csFile);
         }
+        Debug.Log("Excel Reader Work is over!");
     }
 
     private static void ClearConfig()
@@ -58,7 +58,7 @@ public class ExcelReaderTool : MonoBehaviour
         //Get all config files
         var configFilesNameContainer = Directory.GetFiles(_writeFloderPath, "*.*");
 
-        foreach(var config in configFilesNameContainer)
+        foreach (var config in configFilesNameContainer)
         {
             File.Delete(config);
         }
@@ -68,43 +68,97 @@ public class ExcelReaderTool : MonoBehaviour
     {
         StringBuilder name = new StringBuilder();
 
-        char[] charArray = stream.ToCharArray();
-        foreach(char c in charArray)
-        {
-            if(c == '\\')
-            {
-                name.Clear();
-                continue;
-            }
-            
-            if(c == '.')
-            {
-                break;
-            }
-
-            name.Append(c);
-        }
+        GetFileName(stream, name);
         name.Append("Config.cs");
 
         return _writeFloderPath + '\\' + name.ToString();
     }
 
-    private static void ReadExcelSheet_WriteCSFile(IExcelDataReader Sheet, FileStream writeFile)
+    private static void GetFileName(string stream, StringBuilder stringBuilder)
+    {
+        char[] charArray = stream.ToCharArray();
+        foreach (char c in charArray)
+        {
+            if (c == '\\')
+            {
+                stringBuilder.Clear();
+                continue;
+            }
+
+            if (c == '.')
+            {
+                break;
+            }
+
+            stringBuilder.Append(c);
+        }
+    }
+
+    private static void ReadExcelSheet_WriteCSFile(IExcelDataReader Sheet, FileStream file)
     {
         //Number of valid columns on worksheet
         int columnCount = Sheet.FieldCount;
         //Number of valid rows on worksheet
         int rowCount = Sheet.RowCount;
 
+        InitConfigCS(file);
+
         for (int i = 0; i < rowCount; i++)
         {
             Sheet.Read();
-            for(int j = 0; j < columnCount; j++)
+            for (int j = 0; j < columnCount; j++)
             {
                 var v = Sheet.GetValue(j);
-                Debug.Log(v);
             }
         }
 
+        file.Close();
+    }
+
+    private static void InitConfigCS(FileStream file)
+    {
+        WriteReferencePackage(file);
+        WriteStaticConfig(file);
+    }
+
+    private static void WriteReferencePackage(FileStream file)
+    {
+        String data = "using UnityEngine;\n" +
+            "using System;\n" +
+            "using System.Collections.Generic;\n\n";
+
+        byte[] byteArray = System.Text.Encoding.UTF8.GetBytes(data);
+        file.Write(byteArray, 0, byteArray.Length);
+    }
+
+    private static void WriteStaticConfig(FileStream file)
+    {
+        StringBuilder nameSB = new StringBuilder();
+        GetFileName(file.Name, nameSB);
+        string name = nameSB.ToString();
+
+        string data = "namespace Config\n" +
+              "{\n" +
+              "     public class " + name + "\n" +
+              "     {\n" +
+              "         private " + name + "() {}\n" +
+              "\n" +
+              "         private static " + name + " _init = null;\n" +
+              "         public static " + name + " Init\n" +
+              "         {\n" +
+              "             get\n" +
+              "             {\n" +
+              "                 if (_init == null)\n" +
+              "                     _init = new " + name + "();\n" +
+              "                 return _init;\n" +
+              "             }\n" +
+              "         }\n" +
+              "\n" +
+              "         private Dictionary<int,>" +
+              "     }\n" +
+              "}\n";
+
+        byte[] byteArray = System.Text.Encoding.UTF8.GetBytes(data);
+        file.Write(byteArray, 0, byteArray.Length);
     }
 }
