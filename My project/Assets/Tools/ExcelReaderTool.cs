@@ -10,8 +10,10 @@ using System.Text;
 
 public class ExcelReaderTool : MonoBehaviour
 {
-    private static String _readFloderPath = null;
-    private static String _writeFloderPath = null;
+    private static string _readFloderPath = null;
+    private static string _writeFloderPath = null;
+
+    private static StringBuilder _dataClass = new StringBuilder();
 
     [MenuItem("Tools/Excel Reader")]
     public static void ExcelReader()
@@ -103,7 +105,20 @@ public class ExcelReaderTool : MonoBehaviour
 
         InitConfigCS(file);
 
-        for (int i = 0; i < rowCount; i++)
+        string[][] dataType = new string[3][];
+        for(int i = 0; i < 3; i++)
+        {
+            dataType[i] = new string[columnCount];
+            Sheet.Read();
+            for(int j = 0; j < columnCount; j++)
+            {
+                dataType[i][j] = Sheet.GetValue(j)?.ToString();
+            }
+        }
+
+        WriteDataClass(dataType);
+
+        for (int i = 3; i < rowCount; i++)
         {
             Sheet.Read();
             for (int j = 0; j < columnCount; j++)
@@ -139,26 +154,58 @@ public class ExcelReaderTool : MonoBehaviour
 
         string data = "namespace Config\n" +
               "{\n" +
-              "     public class " + name + "\n" +
+              $"     public class {name}\n" +
               "     {\n" +
               "         private " + name + "() {}\n" +
               "\n" +
-              "         private static " + name + " _init = null;\n" +
-              "         public static " + name + " Init\n" +
+              $"         private static {name} _init = null;\n" +
+              $"         public static {name} Init\n" +
               "         {\n" +
               "             get\n" +
               "             {\n" +
               "                 if (_init == null)\n" +
-              "                     _init = new " + name + "();\n" +
+              $"                     _init = new {name}();\n" +
               "                 return _init;\n" +
               "             }\n" +
               "         }\n" +
               "\n" +
-              "         private Dictionary<int,>" +
+              "         //key is Data's ID\n" +
+              "         private Dictionary<int, Data> _dataContainer = new Dictionary<int, Data>(8);\n" +
               "     }\n" +
+              _dataClass.ToString() +
+              "\n" +              
               "}\n";
 
         byte[] byteArray = System.Text.Encoding.UTF8.GetBytes(data);
         file.Write(byteArray, 0, byteArray.Length);
+    }
+
+    private static void WriteDataClass(string[][] dataInfo)
+    {
+        _dataClass.Append(
+              "     \npublic class Data\n" +
+              "     {\n");
+
+        int infoWidth = dataInfo[0].Length;
+        for(int i = 0; i < infoWidth; i++)
+        {
+            if(dataInfo[0][i] != null)
+            {
+                _dataClass.Append(
+                    $"          //{dataInfo[0][i]}\n");
+            }
+
+            if(dataInfo[1][i] == null || dataInfo [2][i] == null)
+            {
+                Debug.LogError("Excel Reader Error :: Excel data incomplete information, please check your excel stats name or type is incomplete?");
+                return;
+            }
+
+            _dataClass.Append(
+                $"          public {dataInfo[2][i]} {dataInfo[1][i]};\n\n");
+        }
+
+        _dataClass.Append(
+              "     }\n");
     }
 }
