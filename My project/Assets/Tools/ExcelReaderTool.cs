@@ -103,20 +103,20 @@ public class ExcelReaderTool : MonoBehaviour
         //Number of valid rows on worksheet
         int rowCount = Sheet.RowCount;
 
-        InitConfigCS(file);
-
-        string[][] dataType = new string[3][];
+        string[][] dataInfo = new string[3][];
         for(int i = 0; i < 3; i++)
         {
-            dataType[i] = new string[columnCount];
+            dataInfo[i] = new string[columnCount];
             Sheet.Read();
             for(int j = 0; j < columnCount; j++)
             {
-                dataType[i][j] = Sheet.GetValue(j)?.ToString();
+                dataInfo[i][j] = Sheet.GetValue(j)?.ToString();
             }
         }
 
-        WriteDataClass(dataType);
+        WriteDataClass(dataInfo);
+
+        InitConfigCS(file);
 
         for (int i = 3; i < rowCount; i++)
         {
@@ -178,24 +178,27 @@ public class ExcelReaderTool : MonoBehaviour
 
         byte[] byteArray = System.Text.Encoding.UTF8.GetBytes(data);
         file.Write(byteArray, 0, byteArray.Length);
+
+        _dataClass.Clear();
+
     }
 
     private static void WriteDataClass(string[][] dataInfo)
     {
         _dataClass.Append(
-              "     \npublic class Data\n" +
+              "\n     public class Data\n" +
               "     {\n");
 
         int infoWidth = dataInfo[0].Length;
-        for(int i = 0; i < infoWidth; i++)
+        for (int i = 0; i < infoWidth; i++)
         {
-            if(dataInfo[0][i] != null)
+            if (dataInfo[0][i] != null)
             {
                 _dataClass.Append(
                     $"          //{dataInfo[0][i]}\n");
             }
 
-            if(dataInfo[1][i] == null || dataInfo [2][i] == null)
+            if (dataInfo[1][i] == null || dataInfo[2][i] == null)
             {
                 Debug.LogError("Excel Reader Error :: Excel data incomplete information, please check your excel stats name or type is incomplete?");
                 return;
