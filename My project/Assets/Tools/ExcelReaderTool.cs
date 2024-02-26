@@ -7,12 +7,14 @@ using System.Data;
 using System;
 using ExcelDataReader;
 using System.Text;
+using Config;
 
 public class ExcelReaderTool : MonoBehaviour
 {
     private static string _readFloderPath = null;
     private static string _writeFloderPath = null;
 
+    private static string _configName = null;
     private static StringBuilder _dataClass = new StringBuilder();
 
     [MenuItem("Tools/Excel Reader")]
@@ -24,7 +26,7 @@ public class ExcelReaderTool : MonoBehaviour
         if (ExcelReaderTool._readFloderPath == null)
             _readFloderPath = Directory.GetDirectories(curDirectory, "Excel")[0];
         if (ExcelReaderTool._writeFloderPath == null)
-            _writeFloderPath = Directory.GetDirectories(curDirectory, "Config")[0];
+            _writeFloderPath = Directory.GetDirectories(curDirectory + "/Assets", "Config")[0];
 
         ExcelReaderTool.Work();
     }
@@ -71,6 +73,7 @@ public class ExcelReaderTool : MonoBehaviour
         StringBuilder name = new StringBuilder();
 
         GetFileName(stream, name);
+        _configName = name.ToString();
         name.Append("Config.cs");
 
         return _writeFloderPath + '\\' + name.ToString();
@@ -98,17 +101,18 @@ public class ExcelReaderTool : MonoBehaviour
 
     private static void ReadExcelSheet_WriteCSFile(IExcelDataReader Sheet, FileStream file)
     {
-        //Number of valid columns on worksheet
-        int columnCount = Sheet.FieldCount;
         //Number of valid rows on worksheet
         int rowCount = Sheet.RowCount;
+        //Number of valid columns on worksheet
+        int columnCount = Sheet.FieldCount;
 
+        //befor WriteDataClass(), Init Data
         string[][] dataInfo = new string[3][];
-        for(int i = 0; i < 3; i++)
+        for (int i = 0; i < 3; i++)
         {
             dataInfo[i] = new string[columnCount];
             Sheet.Read();
-            for(int j = 0; j < columnCount; j++)
+            for (int j = 0; j < columnCount; j++)
             {
                 dataInfo[i][j] = Sheet.GetValue(j)?.ToString();
             }
@@ -165,28 +169,34 @@ public class ExcelReaderTool : MonoBehaviour
               "             {\n" +
               "                 if (_init == null)\n" +
               $"                     _init = new {name}();\n" +
+              $"                _init.OnConfigInit();\n" +
               "                 return _init;\n" +
               "             }\n" +
               "         }\n" +
               "\n" +
               "         //key is Data's ID\n" +
-              "         private Dictionary<int, Data> _dataContainer = new Dictionary<int, Data>(8);\n" +
+              $"        private Dictionary<int, {_configName}Data> _dataContainer = new Dictionary<int, {_configName}Data>(8);\n" +
+              "\n" +
+              "         private void OnConfigInit()\n" +
+              "         {\n" +
+              "             \n" +
+              "         }\n" +
               "     }\n" +
               _dataClass.ToString() +
-              "\n" +              
+              "\n" +
               "}\n";
 
         byte[] byteArray = System.Text.Encoding.UTF8.GetBytes(data);
         file.Write(byteArray, 0, byteArray.Length);
 
         _dataClass.Clear();
-
+        _configName = null;
     }
 
     private static void WriteDataClass(string[][] dataInfo)
     {
         _dataClass.Append(
-              "\n     public class Data\n" +
+              $"\n     public class {_configName}Data\n" +
               "     {\n");
 
         int infoWidth = dataInfo[0].Length;
@@ -196,6 +206,11 @@ public class ExcelReaderTool : MonoBehaviour
             {
                 _dataClass.Append(
                     $"          //{dataInfo[0][i]}\n");
+            }
+
+            if (dataInfo[1][i] == null && dataInfo[2][i] == null)
+            {
+                continue;
             }
 
             if (dataInfo[1][i] == null || dataInfo[2][i] == null)
@@ -210,5 +225,6 @@ public class ExcelReaderTool : MonoBehaviour
 
         _dataClass.Append(
               "     }\n");
+
     }
 }
