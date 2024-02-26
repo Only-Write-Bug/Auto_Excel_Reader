@@ -7,9 +7,7 @@ using System.Data;
 using System;
 using ExcelDataReader;
 using System.Text;
-#if UNITY_EDITOR
 using Config;
-#endif
 
 public class ExcelReaderTool
 {
@@ -191,7 +189,7 @@ public class ExcelReaderTool
 
         byte[] byteArray = System.Text.Encoding.UTF8.GetBytes(data);
         file.Write(byteArray, 0, byteArray.Length);
-
+        
         _dataClass.Clear();
         _configName = null;
     }
@@ -203,6 +201,41 @@ public class ExcelReaderTool
               "     {\n");
 
         int infoWidth = dataInfo[0].Length;
+
+        //write init method
+        StringBuilder initMethodArgsString = new StringBuilder();
+        StringBuilder initMembersString = new StringBuilder();
+        for(int i = 0; i < infoWidth; i++)
+        {
+            if (dataInfo[1][i] == null && dataInfo[2][i] == null)
+            {
+                continue;
+            }
+
+            if (dataInfo[1][i] == null || dataInfo[2][i] == null)
+            {
+                Debug.LogError($"Excel Reader Error :: {_configName} :: Excel data incomplete information, please check your excel stats name or type is incomplete?");
+                _dataClass.Append(
+                "     }\n");
+                return;
+            }
+
+            //TODO: Check whether the type is valid
+
+            initMethodArgsString.Append($"{dataInfo[2][i]} tmp{dataInfo[1][i]} = {GetTypeNormalValue(dataInfo[2][i])}");
+            if(i != infoWidth -1)
+            {
+                initMethodArgsString.Append(", ");
+            }
+        }
+        _dataClass.Append(
+             $"         public {_configName}Data({initMethodArgsString.ToString()})\n" +
+              "         {\n" +
+              "             \n" +
+              initMembersString.ToString() +
+              "         }\n\n");
+
+        //write member
         for (int i = 0; i < infoWidth; i++)
         {
             if (dataInfo[0][i] != null)
@@ -216,14 +249,8 @@ public class ExcelReaderTool
                 continue;
             }
 
-            if (dataInfo[1][i] == null || dataInfo[2][i] == null)
-            {
-                Debug.LogError("Excel Reader Error :: Excel data incomplete information, please check your excel stats name or type is incomplete?");
-                return;
-            }
-
             _dataClass.Append(
-                $"          internal {dataInfo[2][i]} _{dataInfo[1][i]};\n" +
+                $"          private {dataInfo[2][i]} _{dataInfo[1][i]};\n" +
                 $"          public {dataInfo[2][i]} {dataInfo[1][i]}\n" +
                  "          {\n" +
                  "              get { return " +
@@ -236,4 +263,32 @@ public class ExcelReaderTool
               "     }\n");
 
     }
+
+    private static string GetTypeNormalValue(string type)
+    {
+        switch(type)
+        {
+            case "short":
+            case "long":
+            case "int":
+            case "float":
+            case "double":
+                return "0";
+            case "bool":
+                Debug.LogError($"Excel Reader Error :: {_configName} :: The file has an unset type of bool, please check, the default setting is false!");
+                return "false";
+            case "char":
+                return "''";
+            case "Vector2":
+                return "new Vector2()";
+            case "Vector3":
+                return "new Vector3()";
+            default:
+                break;
+        }
+
+        return "null";
+    }
 }
+
+namespace Config { }
