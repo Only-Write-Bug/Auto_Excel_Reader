@@ -7,9 +7,11 @@ using System.Data;
 using System;
 using ExcelDataReader;
 using System.Text;
+#if UNITY_EDITOR
 using Config;
+#endif
 
-public class ExcelReaderTool : MonoBehaviour
+public class ExcelReaderTool
 {
     private static string _readFloderPath = null;
     private static string _writeFloderPath = null;
@@ -156,7 +158,8 @@ public class ExcelReaderTool : MonoBehaviour
         GetFileName(file.Name, nameSB);
         string name = nameSB.ToString();
 
-        string data = "namespace Config\n" +
+        string data =
+              "namespace Config\n" +
               "{\n" +
               $"     public class {name}\n" +
               "     {\n" +
@@ -220,7 +223,13 @@ public class ExcelReaderTool : MonoBehaviour
             }
 
             _dataClass.Append(
-                $"          public {dataInfo[2][i]} {dataInfo[1][i]};\n\n");
+                $"          internal {dataInfo[2][i]} _{dataInfo[1][i]};\n" +
+                $"          public {dataInfo[2][i]} {dataInfo[1][i]}\n" +
+                 "          {\n" +
+                 "              get { return " +
+                $"this._{dataInfo[1][i]}; " +
+                 "}\n" +
+                 "          }\n\n");
         }
 
         _dataClass.Append(
