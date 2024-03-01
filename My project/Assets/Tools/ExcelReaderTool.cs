@@ -9,12 +9,15 @@ using ExcelDataReader;
 using System.Text;
 using Config;
 
+namespace Config { }
+
 public class ExcelReaderTool
 {
     private static string _readFloderPath = null;
     private static string _writeFloderPath = null;
 
     private static string _configName = null;
+    private static string _configScripName = null;
     private static StringBuilder _dataClass = new StringBuilder();
 
     [MenuItem("Tools/Excel Reader")]
@@ -23,10 +26,21 @@ public class ExcelReaderTool
         //Get project path
         var curDirectory = Directory.GetCurrentDirectory();
 
-        if (ExcelReaderTool._readFloderPath == null)
+        if (_readFloderPath == null)
             _readFloderPath = Directory.GetDirectories(curDirectory, "Excel")[0];
-        if (ExcelReaderTool._writeFloderPath == null)
+        if (_writeFloderPath == null)
             _writeFloderPath = Directory.GetDirectories(curDirectory + "/Assets", "Config")[0];
+
+        if(_readFloderPath == null)
+        {
+            Debug.LogError("Excel Reader Error :: Read floder is null, please check!");
+            return;
+        }
+        if (_writeFloderPath == null)
+        {
+            Debug.LogError("Excel Reader Error :: Write floder is null, please check!");
+            return;
+        }
 
         ExcelReaderTool.Work();
     }
@@ -62,9 +76,9 @@ public class ExcelReaderTool
         //Get all config files
         var configFilesNameContainer = Directory.GetFiles(_writeFloderPath, "*.*");
 
-        foreach (var config in configFilesNameContainer)
+        foreach (var file in configFilesNameContainer)
         {
-            File.Delete(config);
+            File.Delete(file);
         }
     }
 
@@ -122,6 +136,7 @@ public class ExcelReaderTool
 
         InitConfigCS(file);
 
+        //Data Storage
         for (int i = 3; i < rowCount; i++)
         {
             Sheet.Read();
@@ -132,6 +147,18 @@ public class ExcelReaderTool
         }
 
         file.Close();
+
+        //Input Data
+        var configScriptType = Type.GetType("Config." + _configScripName);
+        if(configScriptType == null)
+        {
+            Debug.LogError($"Excel Reader Error :: doesn't find name is Config.{_configScripName}'s script");
+        }
+        else
+        {
+            var configClass = Activator.CreateInstance(configScriptType);
+        }
+        _configScripName = null;
     }
 
     private static void InitConfigCS(FileStream file)
@@ -154,22 +181,22 @@ public class ExcelReaderTool
     {
         StringBuilder nameSB = new StringBuilder();
         GetFileName(file.Name, nameSB);
-        string name = nameSB.ToString();
+        _configScripName = nameSB.ToString();
 
         string data =
               "namespace Config\n" +
               "{\n" +
-              $"     public class {name}\n" +
+              $"     public class {_configScripName}\n" +
               "     {\n" +
-              "         private " + name + "() {}\n" +
+              "         private " + _configScripName + "() {}\n" +
               "\n" +
-              $"         private static {name} _init = null;\n" +
-              $"         public static {name} Init\n" +
+              $"         private static {_configScripName} _init = null;\n" +
+              $"         public static {_configScripName} Init\n" +
               "         {\n" +
               "             get\n" +
               "             {\n" +
               "                 if (_init == null)\n" +
-              $"                     _init = new {name}();\n" +
+              $"                     _init = new {_configScripName}();\n" +
               $"                _init.OnConfigInit();\n" +
               "                 return _init;\n" +
               "             }\n" +
@@ -275,7 +302,7 @@ public class ExcelReaderTool
             case "double":
                 return "0";
             case "bool":
-                Debug.LogError($"Excel Reader Error :: {_configName} :: The file has an unset type of bool, please check, the default setting is false!");
+                Debug.LogWarning($"Excel Reader Error :: {_configName} :: The file has an unset type of bool, please check, the default setting is false!");
                 return "false";
             case "char":
                 return "''";
@@ -290,5 +317,3 @@ public class ExcelReaderTool
         return "null";
     }
 }
-
-namespace Config { }
