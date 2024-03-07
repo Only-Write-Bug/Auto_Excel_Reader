@@ -23,12 +23,13 @@ public class ExcelReaderTool
     private static string _configScripName = null;
     private static StringBuilder _dataClass = new StringBuilder();
 
+    private static string[] _nameContainer = null;
     private static string[] _typeContainer = null;
 
     [MenuItem("Tools/Excel Reader")]
     public static void ExcelReader()
     {
-        if(!InitWorkFloderStream())
+        if (!InitWorkFloderStream())
         {
             Debug.LogError("Excel Reader Error :: Work Floder Stream is Error, stop work!!!");
             return;
@@ -97,6 +98,7 @@ public class ExcelReaderTool
         var excelFilesNameContainer = Directory.GetFiles(_readFloderPath, "*.xlsx");
 
         ClearConfig();
+        ClearXML();
 
         foreach (var fileStream in excelFilesNameContainer)
         {
@@ -121,6 +123,17 @@ public class ExcelReaderTool
     {
         //Get all config files
         var configFilesNameContainer = Directory.GetFiles(_writeFloderPath, "*.*");
+
+        foreach (var file in configFilesNameContainer)
+        {
+            File.Delete(file);
+        }
+    }
+
+    private static void ClearXML()
+    {
+        //Get all config files
+        var configFilesNameContainer = Directory.GetFiles(_xmlFloderPath, "*.*");
 
         foreach (var file in configFilesNameContainer)
         {
@@ -166,6 +179,7 @@ public class ExcelReaderTool
         //Number of valid columns on worksheet
         int columnCount = Sheet.FieldCount;
 
+        _nameContainer = new string[columnCount];
         _typeContainer = new string[columnCount];
 
         //befor WriteDataClass(), Init Data
@@ -177,10 +191,10 @@ public class ExcelReaderTool
             for (int j = 0; j < columnCount; j++)
             {
                 dataInfo[i][j] = Sheet.GetValue(j)?.ToString();
+                if (i == 1)
+                    _nameContainer[j] = dataInfo[i][j];
                 if (i == 2)
-                {
                     _typeContainer[j] = dataInfo[i][j];
-                }
             }
         }
 
@@ -188,18 +202,33 @@ public class ExcelReaderTool
 
         InitConfigCS(file);
 
-        //Data Storage
+        //Data Storage, Write DataXML File
         XmlDocument xml = new XmlDocument();
+        XmlElement rootElement = xml.CreateElement("Root");
+        xml.AppendChild(rootElement);
         for (int i = 3; i < rowCount; i++)
         {
             Sheet.Read();
+
+            XmlElement sonElement = xml.CreateElement(_nameContainer[0]);
+            sonElement.SetAttribute("Type", _typeContainer[0]);
+            sonElement.InnerText = Sheet.GetValue(0).ToString();
+
             for (int j = 0; j < columnCount; j++)
             {
                 var v = Sheet.GetValue(j);
 
-            }
-        }
+                if (_nameContainer?[j] == null || _typeContainer?[j] == null)
+                    continue;
 
+                XmlElement grandsonElement = xml.CreateElement(_nameContainer[j]);
+                grandsonElement.SetAttribute("Type", _typeContainer[j]);
+                grandsonElement.InnerText = v == null ? "NULL" : v.ToString();
+                sonElement.AppendChild(grandsonElement);
+            }
+            rootElement.AppendChild(sonElement);
+        }
+        xml.Save(_xmlFloderPath + "/" + _configScripName + "_XML.xml");
 
         file.Close();
 
@@ -290,7 +319,8 @@ public class ExcelReaderTool
         //write init method
         StringBuilder initMethodArgsString = new StringBuilder();
         StringBuilder initMembersString = new StringBuilder();
-        initMethodArgsString.Append("         #pragma warning disable CS0414\n");
+
+        initMethodArgsString.Append("#pragma warning disable CS0414\n");
         for (int i = 0; i < infoWidth; i++)
         {
             if (dataInfo[1][i] == null && dataInfo[2][i] == null)
@@ -310,8 +340,9 @@ public class ExcelReaderTool
 
             initMethodArgsString.Append($"         private {dataInfo[2][i]} _default_{dataInfo[1][i]} = {GetTypeNormalValue(dataInfo[2][i])};\n");
         }
-        initMethodArgsString.Append("         #pragma warning restore CS0414\n\n");
-        _dataClass.Append( initMethodArgsString.ToString() +
+        initMethodArgsString.Append("#pragma warning restore CS0414\n\n");
+
+        _dataClass.Append(initMethodArgsString.ToString() +
              $"         public {_configName}Data()\n" +
               "         {\n" +
               "             \n" +
