@@ -290,6 +290,7 @@ public class ExcelReaderTool
         //write init method
         StringBuilder initMethodArgsString = new StringBuilder();
         StringBuilder initMembersString = new StringBuilder();
+        initMethodArgsString.Append("         #pragma warning disable CS0414\n");
         for (int i = 0; i < infoWidth; i++)
         {
             if (dataInfo[1][i] == null && dataInfo[2][i] == null)
@@ -307,8 +308,9 @@ public class ExcelReaderTool
 
             //TODO: Check whether the type is valid
 
-            initMethodArgsString.Append($"         private {dataInfo[2][i]} _default{dataInfo[1][i]} = {GetTypeNormalValue(dataInfo[2][i])};\n\n");
+            initMethodArgsString.Append($"         private {dataInfo[2][i]} _default_{dataInfo[1][i]} = {GetTypeNormalValue(dataInfo[2][i])};\n");
         }
+        initMethodArgsString.Append("         #pragma warning restore CS0414\n\n");
         _dataClass.Append( initMethodArgsString.ToString() +
              $"         public {_configName}Data()\n" +
               "         {\n" +
