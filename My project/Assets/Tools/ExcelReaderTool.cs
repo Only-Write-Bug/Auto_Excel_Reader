@@ -9,6 +9,7 @@ using ExcelDataReader;
 using System.Text;
 using Config;
 using System.Reflection;
+using System.Xml;
 
 namespace Config { }
 
@@ -16,37 +17,78 @@ public class ExcelReaderTool
 {
     private static string _readFloderPath = null;
     private static string _writeFloderPath = null;
+    private static string _xmlFloderPath = null;
 
     private static string _configName = null;
     private static string _configScripName = null;
     private static StringBuilder _dataClass = new StringBuilder();
 
     private static string[] _typeContainer = null;
-    private static ArrayList _valuesContainer = new ArrayList(8);
 
     [MenuItem("Tools/Excel Reader")]
     public static void ExcelReader()
+    {
+        if(!InitWorkFloderStream())
+        {
+            Debug.LogError("Excel Reader Error :: Work Floder Stream is Error, stop work!!!");
+            return;
+        }
+        Work();
+    }
+
+    private static bool InitWorkFloderStream()
     {
         //Get project path
         var curDirectory = Directory.GetCurrentDirectory();
 
         if (_readFloderPath == null)
-            _readFloderPath = Directory.GetDirectories(curDirectory, "Excel")[0];
+            _readFloderPath = Directory.GetDirectories(curDirectory, "Excel").Length > 0 ? Directory.GetDirectories(curDirectory, "Excel")[0] : null;
         if (_writeFloderPath == null)
-            _writeFloderPath = Directory.GetDirectories(curDirectory + "/Assets", "Config")[0];
+            _writeFloderPath = Directory.GetDirectories(curDirectory + "/Assets", "Config").Length > 0 ? Directory.GetDirectories(curDirectory + "/Assets", "Config")[0] : null;
+        if (_xmlFloderPath == null)
+            _xmlFloderPath = Directory.GetDirectories(curDirectory, "ConfigDataXML").Length > 0 ? Directory.GetDirectories(curDirectory, "ConfigDataXML")[0] : null;
 
         if (_readFloderPath == null)
         {
-            Debug.LogError("Excel Reader Error :: Read floder is null, please check!");
-            return;
+            try
+            {
+                Directory.CreateDirectory(curDirectory + "Excel");
+            }
+            catch (Exception error)
+            {
+                Debug.LogError("Excel Reader Error :: Create read floder is error, please check! :: " + error);
+                return false;
+            }
+            _readFloderPath = Directory.GetDirectories(curDirectory, "Excel")[0];
         }
         if (_writeFloderPath == null)
         {
-            Debug.LogError("Excel Reader Error :: Write floder is null, please check!");
-            return;
+            try
+            {
+                Directory.CreateDirectory(curDirectory + "/Assets/Config");
+            }
+            catch (Exception error)
+            {
+                Debug.LogError("Excel Reader Error :: Create write floder is error, please check! :: " + error);
+                return false;
+            }
+            _writeFloderPath = Directory.GetDirectories(curDirectory + "/Assets", "Config")[0];
+        }
+        if (_xmlFloderPath == null)
+        {
+            try
+            {
+                Directory.CreateDirectory(curDirectory + "/ConfigDataXML");
+            }
+            catch (Exception error)
+            {
+                Debug.LogError("Excel Reader Error :: Create xml floder is error, please check! :: " + error);
+                return false;
+            }
+            _readFloderPath = Directory.GetDirectories(curDirectory, "ConfigDataXML")[0];
         }
 
-        ExcelReaderTool.Work();
+        return true;
     }
 
     private static void Work()
@@ -147,6 +189,7 @@ public class ExcelReaderTool
         InitConfigCS(file);
 
         //Data Storage
+        XmlDocument xml = new XmlDocument();
         for (int i = 3; i < rowCount; i++)
         {
             Sheet.Read();
@@ -154,21 +197,13 @@ public class ExcelReaderTool
             {
                 var v = Sheet.GetValue(j);
 
-                if (j >= _valuesContainer.Count || _valuesContainer[j] == null)
-                {
-                    if (_typeContainer[j].Substring(_typeContainer[j].Length - 2, 2) != "[]")
-                    {
-                        Type t = Type.GetType(_typeContainer[j]);
-                        var valueContainer = CreateValuesContainer<t>(columnCount);
-                    }
-                }
-
             }
         }
 
+
         file.Close();
 
-        //Input Data
+        //Begin Config init, cause if start init on useing, maybe too long time
         var configScriptType = Type.GetType("Config." + _configScripName);
         if (configScriptType == null)
         {
@@ -194,6 +229,7 @@ public class ExcelReaderTool
     {
         String data = "using UnityEngine;\n" +
             "using System;\n" +
+            "using System.Xml;\n" +
             "using System.Collections.Generic;\n\n";
 
         byte[] byteArray = System.Text.Encoding.UTF8.GetBytes(data);
@@ -271,14 +307,10 @@ public class ExcelReaderTool
 
             //TODO: Check whether the type is valid
 
-            initMethodArgsString.Append($"{dataInfo[2][i]} tmp{dataInfo[1][i]} = {GetTypeNormalValue(dataInfo[2][i])}");
-            if (i != infoWidth - 1)
-            {
-                initMethodArgsString.Append(", ");
-            }
+            initMethodArgsString.Append($"         private {dataInfo[2][i]} _default{dataInfo[1][i]} = {GetTypeNormalValue(dataInfo[2][i])};\n\n");
         }
-        _dataClass.Append(
-             $"         public {_configName}Data({initMethodArgsString.ToString()})\n" +
+        _dataClass.Append( initMethodArgsString.ToString() +
+             $"         public {_configName}Data()\n" +
               "         {\n" +
               "             \n" +
               initMembersString.ToString() +
@@ -340,8 +372,4 @@ public class ExcelReaderTool
         return "null";
     }
 
-    private static T[] CreateValuesContainer<T>(int containerLength)
-    {
-        return new T[containerLength];
-    }
 }
