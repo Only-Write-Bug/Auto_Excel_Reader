@@ -11,7 +11,105 @@ using Config;
 using System.Reflection;
 using System.Xml;
 
-namespace Config { }
+namespace Config 
+{
+    public static class TypeConversionTool
+    {
+        public static int Str2Int(string str)
+        {
+            int.TryParse(str, out int result);
+            return result;
+        }
+
+        public static short Str2Short(string str)
+        {
+            short.TryParse(str, out short result);
+            return result;
+        }
+
+        public static long Str2Long(string str)
+        {
+            long.TryParse(str, out long result);
+            return result;
+        }
+
+        public static float Str2float(string str)
+        {
+            float.TryParse(str, out float result);
+            return result;
+        }
+
+        public static double Str2Double(string str)
+        {
+            double.TryParse(str, out double result);
+            return result;
+        }
+
+        public static bool Str2Bool(string str)
+        {
+            bool.TryParse(str, out bool result);
+            return result;
+        }
+
+        public static char Str2Char(string str)
+        {
+            char.TryParse(str, out char result);
+            return result;
+        }
+
+        public static Vector2 Str2Vector2(string str)
+        {            
+            Vector2 result = new Vector2();
+
+            if (str.Length <= 0 || str == null || str.ToUpper() == "NULL")
+                return result;
+
+            StringBuilder tmpSB = new StringBuilder();
+            for(int i = 1; i < str.Length - 1; i++)
+            {
+                tmpSB.Append(str[i]);
+            }
+
+            var numArray = Str2BaseTypeArray<float>(tmpSB.ToString());
+            result.x = (float)numArray.GetValue(0);
+            result.y = (float)numArray.GetValue(1);
+
+            return result;
+        }
+
+        //apply to int、float、short、long、double、bool、char、string
+        public static Array Str2BaseTypeArray<T>(string str)
+        {
+            if (str.Length <= 0)
+                return null;
+
+            Queue<string> dataQueue = new Queue<string>(8);
+            StringBuilder tmpSB = new StringBuilder();
+
+            for (int i = 0; i < str.Length; i++)
+            {
+                if (str[i] == ',')
+                {
+                    dataQueue.Enqueue(tmpSB.ToString());
+                    tmpSB.Clear();
+                    continue;
+                }
+
+                tmpSB.Append(str[i]);
+            }
+            dataQueue.Enqueue(tmpSB.ToString());
+
+            var dataArray = Array.CreateInstance(typeof(T), dataQueue.Count);
+            
+            for (int i = 0; i < dataArray.Length; i++)
+            {
+                dataArray.SetValue((T)Convert.ChangeType(dataQueue.Dequeue(), typeof(T)), i);
+            }
+
+            return dataArray;
+        }
+    }
+}
 
 public class ExcelReaderTool
 {
@@ -35,6 +133,9 @@ public class ExcelReaderTool
             return;
         }
         Work();
+
+        string test = "[12.74,16.19853]";
+        Config.TypeConversionTool.Str2Vector2(test);
     }
 
     private static bool InitWorkFloderStream()
@@ -214,7 +315,7 @@ public class ExcelReaderTool
             sonElement.SetAttribute("Type", _typeContainer[0]);
             sonElement.InnerText = Sheet.GetValue(0).ToString();
 
-            for (int j = 0; j < columnCount; j++)
+            for (int j = 1; j < columnCount; j++)
             {
                 var v = Sheet.GetValue(j);
 
@@ -287,14 +388,19 @@ public class ExcelReaderTool
               "             get\n" +
               "             {\n" +
               "                 if (_init == null)\n" +
-              $"                     _init = new {_configScripName}();\n" +
+              "                 {\n" +
+              $"                    _init = new {_configScripName}();\n" +
+              $"                    _init.OnCreate();\n" +
+              "                 }\n" +
               "                 return _init;\n" +
               "             }\n" +
-              "         }\n" +
-              "\n" +
+              "         }\n\n" +
               "         //key is Data's ID\n" +
-              $"        private Dictionary<int, {_configName}Data> _dataContainer = null;\n" +
-              "\n" +
+              $"        private Dictionary<int, {_configName}Data> _dataContainer = null;\n\n" +
+              "         private void OnCreate()\n" +
+              "         {\n" +
+              "             \n" +
+              "         }\n\n" +
               "" +
               "     }\n" +
               _dataClass.ToString() +
