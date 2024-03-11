@@ -11,7 +11,7 @@ using Config;
 using System.Reflection;
 using System.Xml;
 
-namespace Config 
+namespace Config
 {
     public static class TypeConversionTool
     {
@@ -58,23 +58,106 @@ namespace Config
         }
 
         public static Vector2 Str2Vector2(string str)
-        {            
+        {
             Vector2 result = new Vector2();
 
             if (str.Length <= 0 || str == null || str.ToUpper() == "NULL")
                 return result;
 
             StringBuilder tmpSB = new StringBuilder();
-            for(int i = 1; i < str.Length - 1; i++)
+            for (int i = 1; i < str.Length - 1; i++)
             {
                 tmpSB.Append(str[i]);
             }
 
             var numArray = Str2BaseTypeArray<float>(tmpSB.ToString());
-            result.x = (float)numArray.GetValue(0);
-            result.y = (float)numArray.GetValue(1);
+            result.x = float.Parse(numArray.GetValue(0).ToString());
+            result.y = float.Parse(numArray.GetValue(1).ToString());
 
             return result;
+        }
+
+        public static Vector3 Str2Vector3(string str)
+        {
+            Vector3 result = new Vector3();
+
+            if (str.Length <= 0 || str == null || str.ToUpper() == "NULL")
+                return result;
+
+            StringBuilder tmpSB = new StringBuilder();
+            for (int i = 1; i < str.Length - 1; i++)
+            {
+                tmpSB.Append(str[i]);
+            }
+
+            var numArray = Str2BaseTypeArray<float>(tmpSB.ToString());
+            result.x = float.Parse(numArray.GetValue(0).ToString());
+            result.y = float.Parse(numArray.GetValue(1).ToString());
+            result.z = float.Parse(numArray.GetValue(2).ToString());
+
+            return result;
+        }
+
+        public static Vector2[] Str2Vector2Array(string str)
+        {
+            List<Vector2> tmpList = new List<Vector2>();
+            StringBuilder tmpSB = new StringBuilder();
+            bool vectorIsOver = false;
+
+            for (int i = 0; i < str.Length; i++)
+            {
+                if (str[i] == ',' && vectorIsOver)
+                {
+                    tmpList.Add(Str2Vector2(tmpSB.ToString()));
+                    vectorIsOver = false;
+                    tmpSB.Clear();
+                    continue;
+                }
+
+                tmpSB.Append(str[i]);
+
+                if (str[i] == ']')
+                    vectorIsOver = true;
+
+                if (i == str.Length - 1)
+                {
+                    tmpList.Add(Str2Vector2(tmpSB.ToString()));
+                    break;
+                }
+            }
+
+            return tmpList.ToArray();
+        }
+
+        public static Vector3[] Str2Vector3Array(string str)
+        {
+            List<Vector3> tmpList = new List<Vector3>();
+            StringBuilder tmpSB = new StringBuilder();
+            bool vectorIsOver = false;
+
+            for (int i = 0; i < str.Length; i++)
+            {
+                if (str[i] == ',' && vectorIsOver)
+                {
+                    tmpList.Add(Str2Vector3(tmpSB.ToString()));
+                    vectorIsOver = false;
+                    tmpSB.Clear();
+                    continue;
+                }
+
+                tmpSB.Append(str[i]);
+
+                if (str[i] == ']')
+                    vectorIsOver = true;
+
+                if (i == str.Length - 1)
+                {
+                    tmpList.Add(Str2Vector3(tmpSB.ToString()));
+                    break;
+                }
+            }
+
+            return tmpList.ToArray();
         }
 
         //apply to int、float、short、long、double、bool、char、string
@@ -100,7 +183,7 @@ namespace Config
             dataQueue.Enqueue(tmpSB.ToString());
 
             var dataArray = Array.CreateInstance(typeof(T), dataQueue.Count);
-            
+
             for (int i = 0; i < dataArray.Length; i++)
             {
                 dataArray.SetValue((T)Convert.ChangeType(dataQueue.Dequeue(), typeof(T)), i);
@@ -133,9 +216,6 @@ public class ExcelReaderTool
             return;
         }
         Work();
-
-        string test = "[12.74,16.19853]";
-        Config.TypeConversionTool.Str2Vector2(test);
     }
 
     private static bool InitWorkFloderStream()
