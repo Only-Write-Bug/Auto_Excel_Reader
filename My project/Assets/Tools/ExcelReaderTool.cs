@@ -15,6 +15,55 @@ namespace Config
 {
     public static class TypeConversionTool
     {
+        public static dynamic XMLData2ConfigData(string type, string data)
+        {
+            switch (type)
+            {
+                case "int":
+                    return TypeConversionTool.Str2Int(data);
+                case "short":
+                    return TypeConversionTool.Str2Short(data);
+                case "long":
+                    return TypeConversionTool.Str2Long(data);
+                case "float":
+                    return TypeConversionTool.Str2float(data);
+                case "double":
+                    return TypeConversionTool.Str2Double(data);
+                case "bool":
+                    return TypeConversionTool.Str2Bool(data);
+                case "char":
+                    return TypeConversionTool.Str2Char(data);
+                case "Vector2":
+                    return TypeConversionTool.Str2Vector2(data);
+                case "Vector3":
+                    return TypeConversionTool.Str2Vector3(data);
+                case "int[]":
+                    return TypeConversionTool.Str2BaseTypeArray<int>(data);
+                case "short[]":
+                    return TypeConversionTool.Str2BaseTypeArray<short>(data);
+                case "long[]":
+                    return TypeConversionTool.Str2BaseTypeArray<long>(data);
+                case "float[]":
+                    return TypeConversionTool.Str2BaseTypeArray<float>(data);
+                case "double[]":
+                    return TypeConversionTool.Str2BaseTypeArray<double>(data);
+                case "bool[]":
+                    return TypeConversionTool.Str2BaseTypeArray<bool>(data);
+                case "char[]":
+                    return TypeConversionTool.Str2BaseTypeArray<char>(data);
+                case "string[]":
+                    return TypeConversionTool.Str2BaseTypeArray<string>(data);
+                case "Vector2[]":
+                    return TypeConversionTool.Str2Vector2Array(data);
+                case "Vector3[]":
+                    return TypeConversionTool.Str2Vector3Array(data);
+                default:
+                    break;
+            }
+
+            return null;
+        }
+
         public static int Str2Int(string str)
         {
             int.TryParse(str, out int result);
@@ -199,6 +248,13 @@ public class ExcelReaderTool
     private static string _readFloderPath = null;
     private static string _writeFloderPath = null;
     private static string _xmlFloderPath = null;
+    public static string get_xmlFloderPath
+    {
+        get
+        {
+            return _xmlFloderPath;
+        }
+    }
 
     private static string _configName = null;
     private static string _configScripName = null;
@@ -207,7 +263,7 @@ public class ExcelReaderTool
     private static string[] _nameContainer = null;
     private static string[] _typeContainer = null;
 
-    [MenuItem("Tools/Excel Reader")]
+    [MenuItem("Tools/Excel Reader/Read Excel")]
     public static void ExcelReader()
     {
         if (!InitWorkFloderStream())
@@ -216,6 +272,23 @@ public class ExcelReaderTool
             return;
         }
         Work();
+    }
+
+    [MenuItem("Tools/Excel Reader/Write Config")]
+    public static void WriteConfig()
+    {
+        if(_writeFloderPath == null)
+        {
+            var curDirectory = Directory.GetCurrentDirectory();
+            _writeFloderPath = Directory.GetDirectories(curDirectory + "/Assets", "Config").Length > 0 ? Directory.GetDirectories(curDirectory + "/Assets", "Config")[0] : null;
+        }
+
+        foreach(var configFile in Directory.GetFiles(_writeFloderPath, "*.cs"))
+        {
+            StringBuilder tmpSB = new StringBuilder();
+            GetFileName(configFile, tmpSB);
+            Debug.Log(tmpSB.ToString());
+        }
     }
 
     private static bool InitWorkFloderStream()
@@ -414,18 +487,19 @@ public class ExcelReaderTool
         file.Close();
 
         //Begin Config init, cause if start init on useing, maybe too long time
-        var configScriptType = Type.GetType("Config." + _configScripName);
-        if (configScriptType == null)
-        {
-            Debug.LogError($"Excel Reader Error :: doesn't find name is Config.{_configScripName}'s script");
-        }
-        else
-        {
-            PropertyInfo propertyInfo = configScriptType.GetProperty("Init");
-            MethodInfo methodInfo = propertyInfo.GetGetMethod();
-            object configInstance = Activator.CreateInstance(configScriptType);
-            methodInfo.Invoke(configInstance, null);
-        }
+        //var configScriptType = Type.GetType("Config." + _configScripName);
+        //if (configScriptType == null)
+        //{
+        //    Debug.LogError($"Excel Reader Error :: doesn't find name is Config.{_configScripName}'s script");
+        //}
+        //else
+        //{
+        //    PropertyInfo propertyInfo = configScriptType.GetProperty("Init");
+        //    MethodInfo methodInfo = propertyInfo.GetGetMethod();
+        //    object configInstance = Activator.CreateInstance(configScriptType);
+        //    methodInfo.Invoke(configInstance, null);
+        //}
+
         _configScripName = null;
     }
 
@@ -440,6 +514,7 @@ public class ExcelReaderTool
         String data = "using UnityEngine;\n" +
             "using System;\n" +
             "using System.Xml;\n" +
+            "using System.IO;\n" +
             "using System.Collections.Generic;\n\n";
 
         byte[] byteArray = System.Text.Encoding.UTF8.GetBytes(data);
@@ -460,8 +535,7 @@ public class ExcelReaderTool
               "         public " + _configScripName + "() \n" +
               "         {\n" +
               $"             this._dataContainer = new Dictionary<int, {_configName}Data>(8);\n" +
-              "         }\n" +
-              "\n" +
+              "         }\n\n" +
               $"         private static {_configScripName} _init = null;\n" +
               $"         public static {_configScripName} Init\n" +
               "         {\n" +
@@ -479,7 +553,28 @@ public class ExcelReaderTool
               $"        private Dictionary<int, {_configName}Data> _dataContainer = null;\n\n" +
               "         private void OnCreate()\n" +
               "         {\n" +
-              "             \n" +
+              $"             string xmlFileName = \"{_configScripName}_XML.xml\";\n" +
+              "             string filePath = Path.Combine(ExcelReaderTool.get_xmlFloderPath, xmlFileName);\n" +
+              "             if(File.Exists(filePath))\n" +
+              "             {\n" +
+              "                 XmlDocument xml = new XmlDocument();\n" +
+              "                 xml.Load(filePath);\n\n" +
+              "                 XmlNode root = xml.DocumentElement;\n\n" +
+              "                 foreach(XmlNode sonNode in root.ChildNodes)\n" +
+              "                 {\n" +
+              "                     Debug.Log(sonNode.Name);\n" +
+              "                     foreach(XmlNode grandsonNode in sonNode.ChildNodes)\n" +
+              "                     {\n" +
+              "                         if(grandsonNode.Name == \"#text\")\n" +
+              "                             continue;\n" +
+              "                         Debug.Log(grandsonNode.Name);\n" +
+              "                     }\n" +
+              "                 }\n" +
+              "             }\n" +
+              "             else\n" +
+              "             {\n" +
+              $"                 Debug.LogError(\"Excel Reader Error :: {_configScripName}_XML.xml is not find;\");\n" +
+              "             }\n" +
               "         }\n\n" +
               "" +
               "     }\n" +
