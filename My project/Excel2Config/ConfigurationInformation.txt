@@ -1,0 +1,3 @@
+ExcelPath(F:\UnityProject\Auto_Excel_Reader\My project\Excel2Config\Excel)
+ConfigPath(F:\UnityProject\Auto_Excel_Reader\My project\Excel2Config\Config)
+XMLPath(F:\UnityProject\Auto_Excel_Reader\My project\Excel2Config\XML)
