@@ -6,8 +6,10 @@ namespace ExcelReaderTool
     {
         static void Main(string[] args)
         {
-            ExcelReaderTool.Init.CheckWorkPath();
-            if(ExcelReaderTool.Init.Get_ErrorCount > 0)
+            ExcelReaderTool.Init.Ready();
+            ExcelReaderTool.Init.Work();
+            
+            if(Logger._errorCount > 0)
             {
                 Console.WriteLine("Excel Reader Tool :: have Error, please check log file!!!");
                 Console.ReadKey();
