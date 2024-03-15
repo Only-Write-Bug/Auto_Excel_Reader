@@ -6,27 +6,27 @@ namespace ExcelReaderTool
 {
     internal static class Logger
     {
-        private static string logPath = null;
-        private static string logsFloderPath = null;
+        private static string _logPath = null;
+        private static string _logsFloderPath = null;
 
-        private static StreamWriter curWriter = null;
+        private static StreamWriter _curWriter = null;
         
         public static string LogPath
         {
-            get { return logPath; }
+            get { return _logPath; }
             set
             {
-                if (logPath == null)
-                    logPath = value;
+                if (_logPath == null)
+                    _logPath = value;
             }
         }
 
         //===================================================== public function =====================================================
         public static void Start()
         {
-            if (logPath == null)
+            if (_logPath == null)
                 return;
-            if(logsFloderPath == null)
+            if(_logsFloderPath == null)
                 if (!CreateLogsFloder())
                     return;
 
@@ -35,22 +35,23 @@ namespace ExcelReaderTool
 
         public static void Stop()
         {
-            curWriter.Close();
+            _curWriter.Close();
         }
 
         public static void Info(string str)
         {
-            curWriter.WriteLine("[Info] :: " + str);
+            _curWriter.WriteLine("[Info] :: " + str);
         }
         
         public static void Warning(string str)
         {
-            curWriter.WriteLine("[Warning] :: " + str);
+            _curWriter.WriteLine("[Warning] :: " + str);
         }
         
         public static void Error(string str)
         {
-            curWriter.WriteLine("[Error] :: " + str);
+            _curWriter.WriteLine("[Error] :: " + str);
+            Console.WriteLine("Error :: " + str);
         }
 
         //===================================================== private function =====================================================
@@ -58,7 +59,7 @@ namespace ExcelReaderTool
         {
             try
             {
-                Directory.CreateDirectory(logPath + "\\ExcelReaderTool_WorkLogs");
+                Directory.CreateDirectory(_logPath + "\\ExcelReaderTool_WorkLogs");
             }
             catch (Exception error)
             {
@@ -66,13 +67,13 @@ namespace ExcelReaderTool
                 return false;
             }
 
-            logsFloderPath = Directory.GetDirectories(logPath, "ExcelReaderTool_WorkLogs")?[0];
+            _logsFloderPath = Directory.GetDirectories(_logPath, "ExcelReaderTool_WorkLogs")?[0];
             return true;
         }
         
         private static void CreateNotePadFile()
         {
-            curWriter = new StreamWriter(logsFloderPath + "\\" + CreateLogFileName() + ".txt");
+            _curWriter = new StreamWriter(_logsFloderPath + "\\" + CreateLogFileName() + ".txt");
         }
         
         private static string CreateLogFileName()
