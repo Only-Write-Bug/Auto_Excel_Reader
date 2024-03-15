@@ -7,13 +7,15 @@ namespace ExcelReaderTool
     internal static class Logger
     {
         private static string _logPath = null;
-        private static string _logsFloderPath = null;
+        private static string _logsFolderPath = null;
+        
+        public static int _errorCount = 0;
 
         private static StreamWriter _curWriter = null;
         
         public static string LogPath
         {
-            get { return _logPath; }
+            get => _logPath;
             set
             {
                 if (_logPath == null)
@@ -26,16 +28,18 @@ namespace ExcelReaderTool
         {
             if (_logPath == null)
                 return;
-            if(_logsFloderPath == null)
-                if (!CreateLogsFloder())
+            if(_logsFolderPath == null)
+                if (!CreateLogsFolder())
                     return;
 
+            _errorCount = 0;
             CreateNotePadFile();
         }
 
-        public static void Stop()
+        public static int Stop()
         {
             _curWriter.Close();
+            return _errorCount;
         }
 
         public static void Info(string str)
@@ -51,11 +55,12 @@ namespace ExcelReaderTool
         public static void Error(string str)
         {
             _curWriter.WriteLine("[Error] :: " + str);
+            _errorCount++;
             Console.WriteLine("Error :: " + str);
         }
 
         //===================================================== private function =====================================================
-        private static bool CreateLogsFloder()
+        private static bool CreateLogsFolder()
         {
             try
             {
@@ -63,17 +68,17 @@ namespace ExcelReaderTool
             }
             catch (Exception error)
             {
-                Console.WriteLine("Logger :: Error :: Create logs floder is error, please check! :: " + error);
+                Console.WriteLine("Logger :: Error :: Create logs folder is error, please check! :: " + error);
                 return false;
             }
 
-            _logsFloderPath = Directory.GetDirectories(_logPath, "ExcelReaderTool_WorkLogs")?[0];
+            _logsFolderPath = Directory.GetDirectories(_logPath, "ExcelReaderTool_WorkLogs")?[0];
             return true;
         }
         
         private static void CreateNotePadFile()
         {
-            _curWriter = new StreamWriter(_logsFloderPath + "\\" + CreateLogFileName() + ".txt");
+            _curWriter = new StreamWriter(_logsFolderPath + "\\" + CreateLogFileName() + ".txt");
         }
         
         private static string CreateLogFileName()
