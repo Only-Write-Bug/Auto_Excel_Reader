@@ -22,7 +22,7 @@ namespace ExcelReaderTool
             this.Name = name;
             this.Type = type;
         }
-        
+
         public string Remake;
         public string Name;
         public string Type;
@@ -332,7 +332,7 @@ namespace ExcelReaderTool
             int columnCount = firstSheet.FieldCount;
 
             List<DataStructure> dataStructuresList = new List<DataStructure>();
-            DataStructure[] dataStruturesArray = null;
+            DataStructure[] dataStructuresArray = null;
             Queue<string> remakeQueue = new Queue<string>();
             Queue<string> nameQueue = new Queue<string>();
             Queue<string> typeQueue = new Queue<string>();
@@ -353,13 +353,14 @@ namespace ExcelReaderTool
 
             while (remakeQueue.Count > 0)
             {
-                dataStructuresList.Add(new DataStructure(remakeQueue.Dequeue(), nameQueue.Dequeue(), typeQueue.Dequeue()));
+                dataStructuresList.Add(new DataStructure(remakeQueue.Dequeue(), nameQueue.Dequeue(),
+                    typeQueue.Dequeue()));
             }
 
-            dataStruturesArray = dataStructuresList.ToArray();
+            dataStructuresArray = dataStructuresList.ToArray();
 
             Queue<string[]> dataContainerQueue = new Queue<string[]>();
-            
+
             for (int i = 3; i < rowCount; i++)
             {
                 firstSheet.Read();
@@ -368,18 +369,19 @@ namespace ExcelReaderTool
                 {
                     tmpStrArray[j] = firstSheet.GetValue(j)?.ToString();
                 }
+
                 dataContainerQueue.Enqueue(tmpStrArray);
             }
-            
-            BuildXML(excelPath, dataStruturesArray, dataContainerQueue);
-            BuildConfig(excelPath, dataStruturesArray);
+
+            BuildXML(excelPath, dataStructuresArray, dataContainerQueue);
+            BuildConfig(excelPath, dataStructuresArray);
         }
 
-        private void BuildXML(string excelPath,DataStructure[] dataStructuresArray, Queue<string[]> dataContainerQueue)
+        private void BuildXML(string excelPath, DataStructure[] dataStructuresArray, Queue<string[]> dataContainerQueue)
         {
             XmlWriterSettings settings = new XmlWriterSettings();
             settings.Indent = true;
-            settings.NewLineChars = Environment.NewLine; 
+            settings.NewLineChars = Environment.NewLine;
 
             string excelName = GetFileNameForPath(excelPath);
             string xmlSavePath = _xmlFolderPath + '\\' + excelName + "_XML.xml";
@@ -410,7 +412,7 @@ namespace ExcelReaderTool
                         writer.WriteWhitespace("\t\t");
                         writer.WriteStartElement(dataStructuresArray[j].Name);
                         writer.WriteAttributeString("Type", dataStructuresArray[j].Type);
-                        writer.WriteString(curData[j] ?? "Null");
+                        writer.WriteString(curData[j] ?? "null");
 
                         writer.WriteEndElement();
                         if (j == dataStructuresArray.Length - 1)
@@ -419,7 +421,7 @@ namespace ExcelReaderTool
                             writer.WriteWhitespace("\t");
                         }
                     }
-                    
+
                     writer.WriteEndElement();
                     writer.WriteWhitespace(Environment.NewLine);
                 }
@@ -429,9 +431,226 @@ namespace ExcelReaderTool
             }
         }
 
-        private void BuildConfig(string excelPath,DataStructure[] dataStructuresArray)
+        private void BuildConfig(string excelPath, DataStructure[] dataStructuresArray)
         {
-            
+            string excelName = GetFileNameForPath(excelPath);
+            string CSFileSavePath = _configFolderPath + '\\' + excelName + "_Config.cs";
+            FileStream csFile = new FileStream(CSFileSavePath, FileMode.Create);
+
+            string configName = excelName + "Config";
+
+            WriteReferencePackage(csFile);
+            WriteStaticConfig(csFile, configName, dataStructuresArray);
+
+            csFile.Close();
+        }
+
+        private void WriteReferencePackage(FileStream file)
+        {
+            String data = "using UnityEngine;\n" +
+                          "using System;\n" +
+                          "using System.Xml;\n" +
+                          "using System.IO;\n" +
+                          "using System.Collections.Generic;\n\n";
+
+            byte[] byteArray = System.Text.Encoding.UTF8.GetBytes(data);
+            file.Write(byteArray, 0, byteArray.Length);
+        }
+
+        private void WriteStaticConfig(FileStream file, string className, DataStructure[] dataStructuresArray)
+        {
+            StringBuilder nameSB = new StringBuilder();
+
+            string data =
+                "namespace Config\n" +
+                "{\n" +
+                $"     public class {className}\n" +
+                "     {\n" +
+                $"        const string XMLPath = \"{_xmlFolderPath.Replace("\\", @"\\")}\";\n\n" +
+                "         public " + className + "() \n" +
+                "         {\n" +
+                $"             this._dataContainer = new Dictionary<int, {className}Data>(8);\n" +
+                "         }\n\n" +
+                $"         private static {className} _init = null;\n" +
+                $"         public static {className} Init\n" +
+                "         {\n" +
+                "             get\n" +
+                "             {\n" +
+                "                 if (_init == null)\n" +
+                "                 {\n" +
+                $"                    _init = new {className}();\n" +
+                $"                    _init.OnCreate();\n" +
+                "                 }\n" +
+                "                 return _init;\n" +
+                "             }\n" +
+                "         }\n\n" +
+                "         //key is Data's ID\n" +
+                $"        private Dictionary<int, {className}Data> _dataContainer = null;\n\n" +
+                "         private void OnCreate()\n" +
+                "         {\n" +
+                $"             string xmlFileName = \"{className}_XML.xml\";\n" +
+                "             string filePath = Path.Combine(XMLPath, xmlFileName);\n" +
+                "             if(File.Exists(filePath))\n" +
+                "             {\n" +
+                "                 XmlDocument xml = new XmlDocument();\n" +
+                "                 xml.Load(filePath);\n\n" +
+                "                 XmlNode root = xml.DocumentElement;\n\n" +
+                "                 foreach(XmlNode sonNode in root.ChildNodes)\n" +
+                "                 {\n" +
+                "                     Debug.Log(sonNode.Name);\n" +
+                "                     foreach(XmlNode grandsonNode in sonNode.ChildNodes)\n" +
+                "                     {\n" +
+                "                         if(grandsonNode.Name == \"#text\")\n" +
+                "                             continue;\n" +
+                "                         Debug.Log(grandsonNode.Name);\n" +
+                "                     }\n" +
+                "                 }\n" +
+                "             }\n" +
+                "             else\n" +
+                "             {\n" +
+                $"                 Debug.LogError(\"Excel Reader Error :: {className}_XML.xml is not find;\");\n" +
+                "             }\n" +
+                "         }\n\n" +
+                "" +
+                "     }\n" +
+                WriteDataClass(className, dataStructuresArray) +
+                "\n" +
+                "}\n";
+
+            byte[] byteArray = System.Text.Encoding.UTF8.GetBytes(data);
+            file.Write(byteArray, 0, byteArray.Length);
+        }
+
+        private string WriteDataClass(string className, DataStructure[] dataStructuresArray)
+        {
+            StringBuilder tmpSB = new StringBuilder();
+
+            tmpSB.Append(
+                $"\n     public class {className}Data\n" +
+                "     {\n" +
+                $"          public {className}Data({WriteDataClassConstructorArgs(dataStructuresArray)})\n" +
+                "          {\n" +
+                WriteInitMembers(dataStructuresArray) +
+                "          }\n\n" +
+                WriteDataClassMembers(dataStructuresArray) +
+                "\n");
+
+            tmpSB.Append("     }\n");
+
+            return tmpSB.ToString();
+        }
+
+        private string WriteDataClassMembers(DataStructure[] dataStructuresArray)
+        {
+            StringBuilder tmpSB = new StringBuilder();
+
+            foreach (var dataStructure in dataStructuresArray)
+            {
+                if (dataStructure.Name == null)
+                    continue;
+
+                tmpSB.Append($"          private {dataStructure.Type} _{dataStructure.Name};\n" +
+                             $"          public {dataStructure.Type} Get_{dataStructure.Name}\n" +
+                             "          {\n" +
+                             $"               get {{ return _{dataStructure.Name}; }}\n" +
+                             "          }\n\n");
+            }
+
+            return tmpSB.ToString();
+        }
+
+        private string WriteDataClassConstructorArgs(DataStructure[] dataStructuresArray)
+        {
+            StringBuilder tmpSB = new StringBuilder();
+
+            for (int i = 0; i < dataStructuresArray.Length; i++)
+            {
+                if (dataStructuresArray[i].Type == null)
+                    continue;
+                tmpSB.Append(
+                    $"{ConvertBaseType2NullableType(dataStructuresArray[i].Type)} args_{dataStructuresArray[i].Name}");
+                if (i != dataStructuresArray.Length - 1)
+                    tmpSB.Append(", ");
+            }
+
+            return tmpSB.ToString();
+        }
+
+        private string WriteInitMembers(DataStructure[] dataStructuresArray)
+        {
+            StringBuilder tmpSB = new StringBuilder();
+
+            foreach (var dataStructure in dataStructuresArray)
+            {
+                if (dataStructure.Name == null)
+                    continue;
+                tmpSB.Append(
+                    $"               this._{dataStructure.Name} = args_{dataStructure.Name} ?? {TypeDefaultValue(dataStructure.Type)};\n");
+            }
+
+            return tmpSB.ToString();
+        }
+
+        private string ConvertBaseType2NullableType(string type)
+        {
+            switch (type)
+            {
+                case "int":
+                case "short":
+                case "long":
+                case "float":
+                case "double":
+                case "bool":
+                case "char":
+                case "Vector2":
+                case "Vector3":
+                    return type + "?";
+                default:
+                    return type;
+            }
+        }
+
+        private string TypeDefaultValue(string type)
+        {
+            switch (type)
+            {
+                case "int":
+                    return "int.MinValue";
+                case "short":
+                    return "short.MinValue";
+                case "long":
+                    return "long.MinValue";
+                case "float":
+                    return "float.MinValue";
+                case "double":
+                    return "double.MinValue";
+                case "bool":
+                    return "false";
+                case "char":
+                    return "\'\'";
+                case "Vector2":
+                    return "Vector2.zero";
+                case "Vector3":
+                    return "Vector3.zero";
+                default:
+                    return "null";
+            }
+        }
+
+        private bool IsBaseType(string type)
+        {
+            bool isBaseType = type == "int" || type == "short" || type == "long" ||
+                              type == "float" || type == "double" || type == "bool" ||
+                              type == "char";
+
+            return isBaseType;
+        }
+
+        private string AssignmentMembers(DataStructure dataStructure)
+        {
+            return IsBaseType(dataStructure.Type)
+                ? $"{dataStructure.Type.ToLower()}.Parse(args_{dataStructure.Name} ?? {TypeDefaultValue(dataStructure.Type)})"
+                : $"args_{dataStructure.Name} ?? {TypeDefaultValue(dataStructure.Type)}";
         }
     }
 }
