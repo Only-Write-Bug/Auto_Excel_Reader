@@ -3,6 +3,7 @@
 Excel/Config/XML目录配置：在project/Excel2Config/ConfigurationInformation.txt中
 备注：可以没有配置文件，如果需要自定义目录，在()中添加完整目录，不可使用中文字符，且不要添加多余字符（包括空格）
     如果没有配置文件，则会按照示例目录，创建文件夹
+    存储Config的文件夹要放在Unity项目中的Assets目录下
 
 在读表工具运行时，会有一些信息输出到日志文件中，日志文件在Excel2Config/ExcelReaderTool_WorkLogs中，按照工具启动时间命名
 如果读表工具出现Bug，会在控制台停住，也就是Error，也会在控制台输出

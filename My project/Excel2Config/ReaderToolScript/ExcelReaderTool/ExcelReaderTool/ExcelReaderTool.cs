@@ -384,7 +384,7 @@ namespace ExcelReaderTool
             settings.NewLineChars = Environment.NewLine;
 
             string excelName = GetFileNameForPath(excelPath);
-            string xmlSavePath = _xmlFolderPath + '\\' + excelName + "_XML.xml";
+            string xmlSavePath = _xmlFolderPath + '\\' + excelName + "Config_XML.xml";
 
             using (XmlWriter writer = XmlWriter.Create(xmlSavePath, settings))
             {
@@ -464,9 +464,11 @@ namespace ExcelReaderTool
             string data =
                 "namespace Config\n" +
                 "{\n" +
+                $"     [Config(\"{className}\")]\n" +
                 $"     public class {className}\n" +
                 "     {\n" +
                 $"        const string XMLPath = \"{_xmlFolderPath.Replace("\\", @"\\")}\";\n\n" +
+                "         private DateTime? initStartTime = null;\n\n" +
                 "         public " + className + "() \n" +
                 "         {\n" +
                 $"             this._dataContainer = new Dictionary<int, {className}Data>(8);\n" +
@@ -488,6 +490,7 @@ namespace ExcelReaderTool
                 $"        private Dictionary<int, {className}Data> _dataContainer = null;\n\n" +
                 "         private void OnCreate()\n" +
                 "         {\n" +
+                "             initStartTime = DateTime.Now;\n" +
                 $"             string xmlFileName = \"{className}_XML.xml\";\n" +
                 "             string filePath = Path.Combine(XMLPath, xmlFileName);\n" +
                 "             if(File.Exists(filePath))\n" +
@@ -511,7 +514,10 @@ namespace ExcelReaderTool
                 $"                 Debug.LogError(\"Excel Reader Error :: {className}_XML.xml is not find;\");\n" +
                 "             }\n" +
                 "         }\n\n" +
-                "" +
+                "         public void Awake()\n" +
+                "         {\n" +
+                $"             Debug.Log(\"{className} init is over, Init Time :: \" + (DateTime.Now - initStartTime));\n" +
+                "         }\n" +
                 "     }\n" +
                 WriteDataClass(className, dataStructuresArray) +
                 "\n" +
@@ -635,22 +641,6 @@ namespace ExcelReaderTool
                 default:
                     return "null";
             }
-        }
-
-        private bool IsBaseType(string type)
-        {
-            bool isBaseType = type == "int" || type == "short" || type == "long" ||
-                              type == "float" || type == "double" || type == "bool" ||
-                              type == "char";
-
-            return isBaseType;
-        }
-
-        private string AssignmentMembers(DataStructure dataStructure)
-        {
-            return IsBaseType(dataStructure.Type)
-                ? $"{dataStructure.Type.ToLower()}.Parse(args_{dataStructure.Name} ?? {TypeDefaultValue(dataStructure.Type)})"
-                : $"args_{dataStructure.Name} ?? {TypeDefaultValue(dataStructure.Type)}";
         }
     }
 }
