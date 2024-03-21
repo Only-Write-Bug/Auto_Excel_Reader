@@ -534,6 +534,12 @@ namespace ExcelReaderTool
                 "         public void Awake()\n" +
                 "         {\n" +
                 $"             Debug.Log(\"{className} init is over, Init Time :: \" + (DateTime.Now - initStartTime));\n" +
+                "         }\n\n" +
+                $"         public {className}Data GetDataClassByID(int id)\n" +
+                "         {\n" +
+                "             if(!_dataContainer.ContainsKey(id))\n" +
+                "                 return null;\n" +
+                "             return _dataContainer[id];\n" +
                 "         }\n" +
                 "     }\n" +
                 WriteDataClass(className, dataStructuresArray) +
