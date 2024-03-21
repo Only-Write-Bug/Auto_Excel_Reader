@@ -398,11 +398,9 @@ namespace ExcelReaderTool
                     writer.WriteWhitespace(Environment.NewLine);
                     writer.WriteWhitespace("\t");
 
-                    writer.WriteStartElement(dataStructuresArray[0].Name);
-                    writer.WriteAttributeString("Type", dataStructuresArray[0].Type);
-                    writer.WriteString(curData[0]);
+                    writer.WriteStartElement("Value");
 
-                    for (int j = 1; j < dataStructuresArray.Length; j++)
+                    for (int j = 0; j < dataStructuresArray.Length; j++)
                     {
                         if (dataStructuresArray[j].Name == null)
                             continue;
@@ -451,6 +449,7 @@ namespace ExcelReaderTool
                           "using System;\n" +
                           "using System.Xml;\n" +
                           "using System.IO;\n" +
+                          "using System.Reflection;\n" +
                           "using System.Collections.Generic;\n\n";
 
             byte[] byteArray = System.Text.Encoding.UTF8.GetBytes(data);
@@ -500,13 +499,31 @@ namespace ExcelReaderTool
                 "                 XmlNode root = xml.DocumentElement;\n\n" +
                 "                 foreach(XmlNode sonNode in root.ChildNodes)\n" +
                 "                 {\n" +
-                "                     Debug.Log(sonNode.Name);\n" +
+                $"                     {className}Data tmpData = new {className}Data();\n\n" +
                 "                     foreach(XmlNode grandsonNode in sonNode.ChildNodes)\n" +
                 "                     {\n" +
                 "                         if(grandsonNode.Name == \"#text\")\n" +
-                "                             continue;\n" +
-                "                         Debug.Log(grandsonNode.Name);\n" +
-                "                     }\n" +
+                "                             continue;\n\n" +
+                $"                         PropertyInfo propertyInfo = typeof(Test1ConfigData).GetProperty(grandsonNode.Name);\n" +
+                "                         object value = null;\n" +
+                "                         if (grandsonNode.Attributes[0].Value.Substring(grandsonNode.Attributes[0].Value.Length - 2, 2) == \"[]\")\n" +
+                "                         {\n" +
+                "                             var objectArray = ExcelReadTool.XMLDataConvertArray(grandsonNode.Attributes[0].Value, grandsonNode.InnerText, propertyInfo.GetValue(tmpData));\n" +
+                "                             Type elementType = ExcelReadTool.GetArrayModelType(grandsonNode.Attributes[0].Value);\n" +
+                "                             Array convertedArray = Array.CreateInstance(elementType, objectArray.Length);\n\n" +
+                "                             for (int i = 0; i < objectArray.Length; i++)\n" +
+                "                                 convertedArray.SetValue(objectArray[i], i);\n" +
+                "                             value = convertedArray;\n" +
+                "                         }\n" +
+                "                         else\n" +
+                "                              value = ExcelReadTool.XmlDataConvert(grandsonNode.Attributes[0].Value,grandsonNode.InnerText, propertyInfo.GetValue(tmpData));\n\n" +
+                "                         propertyInfo.SetValue(tmpData, value);\n" +
+                "                     }\n\n" +
+                $"                     if(typeof({className}Data).GetProperty(\"ID\") == null)\n" +
+                "                         continue;\n\n" +
+                $"                     var idProperty = typeof({className}Data).GetProperty(\"ID\");\n" +
+                "                     if (idProperty != null)\n" +
+                "                         _dataContainer[(int)idProperty.GetValue(tmpData)] = tmpData;\n" +
                 "                 }\n" +
                 "             }\n" +
                 "             else\n" +
@@ -534,14 +551,8 @@ namespace ExcelReaderTool
             tmpSB.Append(
                 $"\n     public class {className}Data\n" +
                 "     {\n" +
-                $"          public {className}Data({WriteDataClassConstructorArgs(dataStructuresArray)})\n" +
-                "          {\n" +
-                WriteInitMembers(dataStructuresArray) +
-                "          }\n\n" +
                 WriteDataClassMembers(dataStructuresArray) +
-                "\n");
-
-            tmpSB.Append("     }\n");
+                "     }\n");
 
             return tmpSB.ToString();
         }
@@ -555,65 +566,15 @@ namespace ExcelReaderTool
                 if (dataStructure.Name == null)
                     continue;
 
-                tmpSB.Append($"          private {dataStructure.Type} _{dataStructure.Name};\n" +
-                             $"          public {dataStructure.Type} Get_{dataStructure.Name}\n" +
+                tmpSB.Append($"          private {dataStructure.Type} _{dataStructure.Name} = {TypeDefaultValue(dataStructure.Type)};\n" +
+                             $"          public {dataStructure.Type} {dataStructure.Name}\n" +
                              "          {\n" +
                              $"               get {{ return _{dataStructure.Name}; }}\n" +
+                             $"               internal set{{ this._{dataStructure.Name} = value;}}\n" +
                              "          }\n\n");
             }
 
             return tmpSB.ToString();
-        }
-
-        private string WriteDataClassConstructorArgs(DataStructure[] dataStructuresArray)
-        {
-            StringBuilder tmpSB = new StringBuilder();
-
-            for (int i = 0; i < dataStructuresArray.Length; i++)
-            {
-                if (dataStructuresArray[i].Type == null)
-                    continue;
-                tmpSB.Append(
-                    $"{ConvertBaseType2NullableType(dataStructuresArray[i].Type)} args_{dataStructuresArray[i].Name}");
-                if (i != dataStructuresArray.Length - 1)
-                    tmpSB.Append(", ");
-            }
-
-            return tmpSB.ToString();
-        }
-
-        private string WriteInitMembers(DataStructure[] dataStructuresArray)
-        {
-            StringBuilder tmpSB = new StringBuilder();
-
-            foreach (var dataStructure in dataStructuresArray)
-            {
-                if (dataStructure.Name == null)
-                    continue;
-                tmpSB.Append(
-                    $"               this._{dataStructure.Name} = args_{dataStructure.Name} ?? {TypeDefaultValue(dataStructure.Type)};\n");
-            }
-
-            return tmpSB.ToString();
-        }
-
-        private string ConvertBaseType2NullableType(string type)
-        {
-            switch (type)
-            {
-                case "int":
-                case "short":
-                case "long":
-                case "float":
-                case "double":
-                case "bool":
-                case "char":
-                case "Vector2":
-                case "Vector3":
-                    return type + "?";
-                default:
-                    return type;
-            }
         }
 
         private string TypeDefaultValue(string type)
